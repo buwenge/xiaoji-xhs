@@ -1,0 +1,7 @@
+#!/bin/bash
+# 一键入口：把这个文件放进 PATH（比如 /usr/local/bin/home），AI 就能直接敲
+# `home 小红书 …`。XIAOJI_HOME 指向本仓库，PYTHON 指向装好依赖的解释器。
+XIAOJI_HOME="${XIAOJI_HOME:-/opt/xiaoji-xhs}"
+PYTHON="${PYTHON:-$XIAOJI_HOME/venv/bin/python3}"
+cd "$XIAOJI_HOME" || exit 1
+exec "$PYTHON" home.py "$@"

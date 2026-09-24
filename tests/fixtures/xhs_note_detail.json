@@ -1,0 +1,258 @@
+{
+ "noteDetailMap": {
+  "6a6ebc3f00000000050284d7": {
+   "currentTime": 1790054216131,
+   "note": {
+    "user": {
+     "userId": "000c00000000000000000000",
+     "nickname": "路人13",
+     "avatar": "https://sns-avatar-qc.xhscdn.com/avatar/placeholder11.jpg",
+     "xsecToken": "ABfakeXsecToken04="
+    },
+    "atUserList": [],
+    "time": 1785642047000,
+    "lastUpdateTime": 1785642048000,
+    "noteId": "6a6ebc3f00000000050284d7",
+    "desc": "#钱生钱才是对钱最大的尊重[话题]# #有存款才有底气[话题]#",
+    "interactInfo": {
+     "collected": false,
+     "collectedCount": "360",
+     "commentCount": "3277",
+     "shareCount": "187",
+     "relation": "none",
+     "niceCount": "",
+     "liked": false,
+     "likedCount": "517",
+     "followed": false
+    },
+    "imageList": [
+     {
+      "infoList": [
+       {
+        "imageScene": "WB_PRV",
+        "url": "http://sns-webpic-qc.xhscdn.com/202609221316/3048d5b89c31a5d30e2b9653ad691aad/1040g2sg323bql5pj7akg5pev2iq19eui4bau8eg!nd_prv_wlteh_webp_3"
+       },
+       {
+        "imageScene": "WB_DFT",
+        "url": "http://sns-webpic-qc.xhscdn.com/202609221316/9e2818e9425a06b14072e3eeb164d321/1040g2sg323bql5pj7akg5pev2iq19eui4bau8eg!nd_dft_wlteh_webp_3"
+       }
+      ],
+      "livePhoto": false,
+      "fileId": "1040g2sg323bql5pj7akg5pev2iq19eui4bau8eg",
+      "traceId": "",
+      "urlPre": "http://sns-webpic-qc.xhscdn.com/202609221316/3048d5b89c31a5d30e2b9653ad691aad/1040g2sg323bql5pj7akg5pev2iq19eui4bau8eg!nd_prv_wlteh_webp_3",
+      "urlDefault": "http://sns-webpic-qc.xhscdn.com/202609221316/9e2818e9425a06b14072e3eeb164d321/1040g2sg323bql5pj7akg5pev2iq19eui4bau8eg!nd_dft_wlteh_webp_3",
+      "stream": {},
+      "height": 1387,
+      "width": 987,
+      "url": ""
+     }
+    ],
+    "tagList": [
+     {
+      "type": "topic",
+      "id": "63183d8000000000010073e5",
+      "name": "钱生钱才是对钱最大的尊重"
+     },
+     {
+      "name": "有存款才有底气",
+      "type": "topic",
+      "id": "61d5168d00000000010049fd"
+     }
+    ],
+    "shareInfo": {
+     "unShare": false
+    },
+    "type": "normal",
+    "title": "假如你手握200万存款，你会怎么办？",
+    "xsecToken": "ABfakeXsecToken13="
+   },
+   "comments": {
+    "list": [
+     {
+      "id": "6a79355a000000002100f3dc",
+      "likeCount": "10+",
+      "userInfo": {
+       "nickname": "路人16",
+       "image": "https://sns-avatar-qc.xhscdn.com/avatar/placeholder9.jpg",
+       "aiAgent": false,
+       "xsecToken": "ABfakeXsecToken06=",
+       "userId": "000300000000000000000000"
+      },
+      "subCommentCount": "10+",
+      "pictures": [],
+      "atUsers": [],
+      "createTime": 1786328410000,
+      "subCommentHasMore": true,
+      "noteId": "6a6ebc3f00000000050284d7",
+      "content": "你说的我确实都有，而且是一模一样。车和房子家里买的。存款是工资加上家里给的。每月现在固定收入8000体制内。这200万你是一分不敢花，因为你知道你没有挣200万的能力，属于越花越少。只敢花工资，而且工资还得存一半。有时候花超了。就花花呗，分期还一下。而且200万已经让我存入固定理财里了，五年内我取都取不出来。",
+      "showTags": [],
+      "status": 0,
+      "liked": false,
+      "ipLocation": "黑龙江",
+      "subComments": [
+       {
+        "showTags": [],
+        "ipLocation": "重庆",
+        "content": "[呃R]那我跟你差不多，只有降低物欲",
+        "atUsers": [],
+        "liked": false,
+        "createTime": 1786428188000,
+        "targetComment": {
+         "id": "6a79355a000000002100f3dc",
+         "userInfo": {
+          "userId": "000300000000000000000000",
+          "nickname": "路人16",
+          "image": "https://sns-avatar-qc.xhscdn.com/avatar/placeholder9.jpg",
+          "aiAgent": false,
+          "xsecToken": "ABfakeXsecToken06="
+         }
+        },
+        "pictures": [],
+        "invalid": false,
+        "id": "6a7abb1c00000000070147cb",
+        "noteId": "6a6ebc3f00000000050284d7",
+        "status": 0,
+        "likeCount": "10+",
+        "userInfo": {
+         "nickname": "路人8",
+         "image": "https://sns-avatar-qc.xhscdn.com/avatar/placeholder14.jpg",
+         "aiAgent": false,
+         "xsecToken": "ABfakeXsecToken12=",
+         "userId": "000400000000000000000000"
+        }
+       }
+      ],
+      "subCommentCursor": "6a7abb1c00000000070147cb",
+      "invalid": false,
+      "expended": false,
+      "hasMore": false
+     },
+     {
+      "id": "6a7a70fa00000000020355d8",
+      "userInfo": {
+       "xsecToken": "ABfakeXsecToken10=",
+       "userId": "000f00000000000000000000",
+       "nickname": "路人15",
+       "image": "https://sns-avatar-qc.xhscdn.com/avatar/placeholder3.jpg",
+       "aiAgent": false
+      },
+      "showTags": [],
+      "createTime": 1786409211000,
+      "subComments": [
+       {
+        "targetComment": {
+         "id": "6a7a70fa00000000020355d8",
+         "userInfo": {
+          "userId": "000f00000000000000000000",
+          "nickname": "路人15",
+          "image": "https://sns-avatar-qc.xhscdn.com/avatar/placeholder3.jpg",
+          "aiAgent": false,
+          "xsecToken": "ABfakeXsecToken10="
+         }
+        },
+        "pictures": [],
+        "noteId": "6a6ebc3f00000000050284d7",
+        "userInfo": {
+         "userId": "001100000000000000000000",
+         "nickname": "路人6",
+         "image": "https://sns-avatar-qc.xhscdn.com/avatar/placeholder8.jpg",
+         "aiAgent": false,
+         "xsecToken": "ABfakeXsecToken07="
+        },
+        "showTags": [],
+        "createTime": 1786593178000,
+        "ipLocation": "北京",
+        "invalid": false,
+        "id": "6a7d3f99000000002a030b7e",
+        "status": 0,
+        "content": "实锤了，昂贵的身体[点赞R]",
+        "atUsers": [],
+        "liked": false,
+        "likeCount": "10+"
+       }
+      ],
+      "pictures": [],
+      "liked": false,
+      "likeCount": "10+",
+      "subCommentCount": "7",
+      "subCommentHasMore": true,
+      "invalid": false,
+      "noteId": "6a6ebc3f00000000050284d7",
+      "status": 0,
+      "atUsers": [],
+      "ipLocation": "江苏",
+      "content": "到最后发现，无论有什么，都不能缺健康的身体，包括心理和生理的健康，你也许还了房贷车贷，生活压力大，但如果你有能嚼花生米的牙齿，能爬黄山的体力，能除了偶尔感冒没其他问题的躯体，你就起码拥有了1000万，要不然现在给你200万你愿意拿走一个肾？还是一只肺？我不缺钱，不爱奢侈品就爱各种吃，海鲜牛排日料轮着来，前段时间胃不舒服，两个指标高，赶紧去做了胃镜，胃镜前就想着只要没事，穷点根本没关系，只有那时候才能醒悟身体健康比什么都重要，虽然后来的确没有大问题，但是心里明白思想观念已经转变了，再多的钱和各种消费欲望，什么都没有健康重要，所以，从今天开始，你们要多珍视自己最昂贵的身体",
+      "subCommentCursor": "6a7d3f99000000002a030b7e",
+      "expended": false,
+      "hasMore": true
+     },
+     {
+      "atUsers": [],
+      "userInfo": {
+       "userId": "000700000000000000000000",
+       "nickname": "路人14",
+       "image": "https://sns-avatar-qc.xhscdn.com/avatar/placeholder10.jpg",
+       "aiAgent": false,
+       "xsecToken": "ABfakeXsecToken02="
+      },
+      "createTime": 1786250704000,
+      "ipLocation": "美国",
+      "pictures": [],
+      "content": "好好努力吧 这点儿够干啥",
+      "liked": false,
+      "subCommentCount": "1",
+      "subCommentCursor": "6a7fec9a0000000010011c9f",
+      "invalid": false,
+      "id": "6a7805d0000000002b02ab2c",
+      "noteId": "6a6ebc3f00000000050284d7",
+      "status": 0,
+      "likeCount": "10+",
+      "showTags": [],
+      "subCommentHasMore": false,
+      "subComments": [
+       {
+        "showTags": [],
+        "createTime": 1786768539000,
+        "ipLocation": "浙江",
+        "targetComment": {
+         "id": "6a7805d0000000002b02ab2c",
+         "userInfo": {
+          "userId": "000700000000000000000000",
+          "nickname": "路人14",
+          "image": "https://sns-avatar-qc.xhscdn.com/avatar/placeholder10.jpg",
+          "aiAgent": false,
+          "xsecToken": "ABfakeXsecToken02="
+         }
+        },
+        "id": "6a7fec9a0000000010011c9f",
+        "status": 0,
+        "atUsers": [],
+        "liked": false,
+        "pictures": [],
+        "invalid": false,
+        "noteId": "6a6ebc3f00000000050284d7",
+        "content": "大实话！",
+        "likeCount": "0",
+        "userInfo": {
+         "xsecToken": "ABfakeXsecToken08=",
+         "userId": "000200000000000000000000",
+         "nickname": "路人11",
+         "image": "https://sns-avatar-qc.xhscdn.com/avatar/placeholder16.jpg",
+         "aiAgent": false
+        }
+       }
+      ],
+      "expended": false,
+      "hasMore": false
+     }
+    ],
+    "cursor": "6a7c185e000000000302cf22",
+    "hasMore": true,
+    "loading": false,
+    "firstRequestFinish": true
+   }
+  }
+ },
+ "currentNoteId": "6a6ebc3f00000000050284d7"
+}

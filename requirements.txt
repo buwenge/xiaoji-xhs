@@ -1,0 +1,8 @@
+python-dotenv
+requests
+pytz
+playwright
+aiohttp
+apscheduler
+pillow
+pytest
