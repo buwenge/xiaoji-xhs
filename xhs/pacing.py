@@ -1,4 +1,4 @@
-"""真人节奏：2026-09-26 账号收到"违规预警：浏览行为与真人操作习惯不一样"后加。
+"""真人节奏：让浏览器操作更接近真人习惯。
 
 原来的动作很"机器"：直接拼网址跳搜索页/详情页、页面一开就读完、一次滚
 一大截、鼠标瞬移点击。这里收着"像人一样"的几种动作，`browser.py` 各动作
@@ -8,7 +8,7 @@
 - `click`/`hover`：先把元素滚进视野，鼠标分几十步移过去再点；
 - `type_text`：一个字一个字打；
 - `linger_on_note`：进笔记后停几秒、往后翻几张图；
-- `admit`：每天开浏览器次数上限 + 深夜不开。
+- `admit`：每天开浏览器次数上限。
 
 每个动作对假 page（测试）缺的方法退回旧行为，不抛异常；所有等待都经
 `_sleep`，测试整体打桩成不睡。这只能降低风险，不能消除——机房 IP 和
@@ -31,8 +31,6 @@ TZ = ZoneInfo("Asia/Shanghai")
 
 # 每天开浏览器（一条走浏览器的命令算一次）的上限。
 DAILY_BROWSER_LIMIT = 60
-# 北京时间 [2, 7) 点不开浏览器——凌晨连着刷本身就是异常信号。
-QUIET_HOURS = (2, 7)
 
 SCROLL_STEP_MIN = 120
 SCROLL_STEP_MAX = 360
@@ -58,12 +56,9 @@ def _today(now: datetime) -> str:
 
 
 def admit(now: datetime | None = None) -> None:
-    """开浏览器前的门：深夜不开、当天超过上限不开，都抛 `XhsError`（给
+    """开浏览器前的门：当天超过上限不开，抛 `XhsError`（给
     小机看的一句话）。过了门就把当天次数 +1。"""
     now = now or datetime.now(TZ)
-    start, end = QUIET_HOURS
-    if start <= now.hour < end:
-        raise XhsError(f"太晚了，小红书的浏览器 {end} 点以后再开（发链接给我看不受影响）")
     path = paths.browser_usage_path()
     with locked(path):
         data = read_json(path, {})

@@ -101,12 +101,11 @@ class AdmitTests(PacingTestCase):
         data = json.loads(paths.browser_usage_path().read_text(encoding="utf-8"))
         self.assertEqual(data, {"day": "2026-09-27", "count": 1})
 
-    def test_quiet_hours_refuse_without_counting(self):
-        with self.assertRaises(XhsError):
-            pacing.admit(self._at("2026-09-26T03:30:00"))
-        self.assertFalse(paths.browser_usage_path().exists())
-        pacing.admit(self._at("2026-09-26T01:59:00"))
-        pacing.admit(self._at("2026-09-26T07:00:00"))
+    def test_no_quiet_hours(self):
+        # 没有深夜禁用时段，半夜照样能开。
+        pacing.admit(self._at("2026-09-26T03:30:00"))
+        data = json.loads(paths.browser_usage_path().read_text(encoding="utf-8"))
+        self.assertEqual(data["count"], 1)
 
     def test_corrupt_file_starts_fresh(self):
         paths.browser_usage_path().write_text("{oops", encoding="utf-8")
