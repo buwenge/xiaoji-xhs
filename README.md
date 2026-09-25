@@ -45,6 +45,7 @@ AI（Claude Code 会话）
 bin/home → home.py ─► xhs/cli.py（命令解析、派发）
                         ├─ fetch_light.py   轻量路径：只读分享链接，不开浏览器
                         ├─ browser.py       浏览器路径：Playwright 连 CDP 操作页面
+                        │    ├─ pacing.py   真人节奏：打字搜索、点卡片、分段滚动、每天次数上限
                         │    └─ keeper.py   看守进程：Xvfb + 系统 Chrome + ffmpeg 截帧，空闲自动退出
                         ├─ vision.py / video.py  读图、抽帧（无头 claude -p 子进程）
                         ├─ share.py         发原图/截图/链接 → 你的 daemon HTTP
@@ -61,12 +62,12 @@ bin/home → home.py ─► xhs/cli.py（命令解析、派发）
 |---|---|
 | `home.py`、`bin/home` | 命令入口（公开版只带小红书这一个类别） |
 | `xhs/` | 核心包，拷走就能用 |
-| `daemon_api.py`、`headless_claude.py`、`token_estimate.py`、`cn_numerals.py`、`log_store.py` | xhs 包依赖的小工具模块 |
+| `daemon_api.py`、`headless_claude.py`、`token_estimate.py`、`cn_numerals.py`、`log_store.py`、`file_io.py` | xhs 包依赖的小工具模块 |
 | `push_notify.py` | **占位**，换成你 daemon 的 WebSocket 广播函数 |
 | `integration/` | 原版 daemon 里的接线**摘录**（路由、定时任务、分享接口），不是能直接 import 的文件 |
 | `frontend/` | 前端组件与 `接入说明.md` |
 | `docs/给AI的用法说明.md` | 贴进你机器人系统提示的教法段落 |
-| `tests/` | 438 条测试，全部离线，不连小红书、不起真浏览器 |
+| `tests/` | 456 条测试，全部离线，不连小红书、不起真浏览器 |
 
 ---
 
@@ -120,6 +121,7 @@ home 小红书 帮助
 ## 注意事项
 
 - **封号风险自负。** 机房 IP 加自动化浏览器很容易触发小红书风控，请用小号，别拿主号登录。
+- **浏览节奏是故意放慢的。** 我们自己的小号用了两天就收到"检测到三方工具/AI 自动浏览，浏览行为与真人不同"的违规预警。所以现在搜索是在搜索框里逐字打字再回车，看第几条是在列表里点卡片，滚动分成小段，点之前鼠标先移过去，进笔记会停几秒、翻几张图（`xhs/pacing.py`）。每条浏览器命令因此多等 5–15 秒，AI 这边的命令和输出不变。另外每天最多开 60 次浏览器，北京时间凌晨 2–7 点不开，两个值在 `pacing.py` 顶部改。这只能降低风险：机房 IP 和自动化浏览器本身的特征没有处理。
 - **只做个人阅读。** 这是给自己的 AI 伴侣"陪你刷"用的，不要拿去批量抓取、搬运别人的内容，也不要自己加点赞、评论、关注这类互动操作。自动化互动既违反平台规则，也可能踩到 AI 服务商的使用政策。请遵守小红书的用户协议。
 - 站点改版时，DOM 选择器和数据字段都集中在 `xhs/selectors.py` 一处，只改这里。
 - 测试数据（`tests/fixtures/`）来自公开笔记，作者和评论者的昵称、ID、头像都已换成占位值。

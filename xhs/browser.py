@@ -30,7 +30,7 @@ from typing import Any, Callable
 from PIL import Image
 
 import log_store
-from xhs import XhsError, paths, parse, selectors
+from xhs import XhsError, pacing, paths, parse, selectors
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
@@ -271,6 +271,7 @@ def session():
     动作函数已经把可测的逻辑都拆出去了；真实连通性只能靠真机 smoke。"""
     from playwright.sync_api import sync_playwright  # 惰性 import：只有真用到浏览器才需要这个依赖
 
+    pacing.admit()
     info = ensure()
     with sync_playwright() as pw:
         browser_handle = pw.chromium.connect_over_cdp(f"http://127.0.0.1:{info['cdp_port']}")
@@ -314,6 +315,22 @@ def close_keeper() -> str:
 # ---------------------------------------------------------------------------
 
 
+def _on_xhs(page: Any) -> bool:
+    return "xiaohongshu.com" in (getattr(page, "url", "") or "")
+
+
+def _arrive(page: Any) -> None:
+    """真人节奏（9/26）：浏览器刚起来还停在空白页时，先进首页、看一眼再
+    干别的，不一开门就直奔搜索结果页。"""
+    if _on_xhs(page):
+        return
+    page.goto(selectors.EXPLORE_URL, wait_until=GOTO_WAIT_UNTIL, timeout=GOTO_TIMEOUT_MS)
+    human_pause(2.5)
+    _check_risk(page)
+    pacing.scroll(page, random.randint(250, 700))
+    human_pause(1.5)
+
+
 def open_feed(page: Any) -> list[parse.ListItem]:
     page.goto(selectors.EXPLORE_URL, wait_until=GOTO_WAIT_UNTIL, timeout=GOTO_TIMEOUT_MS)
     human_pause(2.0)
@@ -322,13 +339,55 @@ def open_feed(page: Any) -> list[parse.ListItem]:
     return parse.parse_list_items(raw)
 
 
+def _search_box_focused(page: Any) -> bool:
+    try:
+        focused = page.evaluate("() => document.activeElement && document.activeElement.id")
+    except Exception:  # noqa: BLE001
+        return False
+    return focused == selectors.DOM["search_input"].lstrip("#")
+
+
+def _type_search(page: Any, keyword: str) -> None:
+    """真人节奏（9/26）：点搜索框、清掉旧词、一个字一个字打、回车，等结
+    果页出来。页面上找不到搜索框（改版/弹窗挡住）才退回直接跳搜索网址，
+    并记一条警告——那是原来被判"不像真人"的走法。"""
+    _arrive(page)
+    _close_note_modal(page)
+    box = _safe_query(page, selectors.DOM["search_input"])
+    if box is None:
+        log_store.write_log("warning", "xhs", "页面上找不到搜索框，退回直接跳搜索网址")
+        page.goto(selectors.search_url(keyword), wait_until=GOTO_WAIT_UNTIL, timeout=GOTO_TIMEOUT_MS)
+        human_pause(2.5)
+        _check_risk(page)
+        return
+    pacing.click(page, box)
+    human_pause(0.8)
+    if not _search_box_focused(page):
+        # 9/26 匿名实测：有看不见的遮罩挡着时点不进搜索框，这时再按
+        # Ctrl+A 会把整页选中——没点进去就退回跳网址。
+        log_store.write_log("warning", "xhs", "点不进搜索框，退回直接跳搜索网址")
+        page.goto(selectors.search_url(keyword), wait_until=GOTO_WAIT_UNTIL, timeout=GOTO_TIMEOUT_MS)
+        human_pause(2.5)
+        _check_risk(page)
+        return
+    page.keyboard.press("Control+A")
+    page.keyboard.press("Backspace")
+    pacing.type_text(page, keyword)
+    human_pause(1.0)
+    page.keyboard.press("Enter")
+    for _ in range(4):
+        human_pause(1.6)
+        _check_risk(page)
+        if _on_search_results_page(page, "") and read_state(page, selectors.STATE_PATHS["search"]):
+            break
+
+
 def search(page: Any, keyword: str) -> list[parse.ListItem]:
     """匿名 `search.feeds` 是空数组、页面盖"登录后查看搜索结果"弹窗
     （S3 现场补充实测）——搜不到东西时先看是不是没登录，是的话给明确
     提示而不是"搜索结果是空的"。"""
-    page.goto(selectors.search_url(keyword), wait_until=GOTO_WAIT_UNTIL, timeout=GOTO_TIMEOUT_MS)
-    human_pause(2.5)
-    _check_risk(page)
+    _type_search(page, keyword)
+    human_pause(1.5)
     raw = read_state(page, selectors.STATE_PATHS["search"])
     items = parse.parse_list_items(raw)
     if not items and not is_logged_in(page):
@@ -366,19 +425,19 @@ def load_more(page: Any, kind: str, current_count: int, query: str = "") -> list
     if kind == "search":
         if not is_logged_in(page):
             raise XhsError("这个要登录后才能看")
+        _close_note_modal(page)
         if not _on_search_results_page(page, query):
-            page.goto(selectors.search_url(query), wait_until=GOTO_WAIT_UNTIL, timeout=GOTO_TIMEOUT_MS)
-            human_pause(2.0)
-            _check_risk(page)
+            _type_search(page, query)
     elif kind == "feed":
+        _close_note_modal(page)
         if not _on_explore_page(page):
             raise XhsError("首页列表已经翻过去了，再说一次 首页")
     path = selectors.STATE_PATHS.get(kind)
     if path is None:
         raise XhsError("不知道要翻哪个列表，先搜索或者看首页")
     for _ in range(3):
-        page.mouse.wheel(0, 1600)
-        human_pause(1.8)
+        pacing.scroll(page, random.randint(1100, 1700))
+        human_pause(2.2)
         _check_risk(page)  # 每滚一次都check：撞到风控立刻停，不接着硬滚
         raw = read_state(page, path) or []
         if len(raw) > current_count:
@@ -391,10 +450,49 @@ def load_more(page: Any, kind: str, current_count: int, query: str = "") -> list
 # ---------------------------------------------------------------------------
 
 
+def _note_modal_open(page: Any) -> bool:
+    return _safe_query(page, selectors.DOM["note_modal"]) is not None
+
+
+def _close_note_modal(page: Any) -> None:
+    """列表上开着一篇笔记的弹层时先关掉（点关闭按钮，找不到就按 Esc），
+    真人看完一篇是关掉再点下一篇，不是在地址栏换网址。"""
+    if not _note_modal_open(page):
+        return
+    close_btn = _safe_query(page, selectors.DOM["note_close"])
+    if close_btn is not None:
+        pacing.click(page, close_btn)
+    else:
+        with contextlib.suppress(Exception):
+            page.keyboard.press("Escape")
+    human_pause(1.2)
+
+
+def _open_card(page: Any, note_id: str) -> bool:
+    """在当前列表页上找到这条笔记的卡片点进去；点开了（网址里出现笔记
+    id）返回 True。当前页上没有这张卡片（列表页早就离开了、浏览器重开
+    过）返回 False，由调用方退回直接跳网址。"""
+    _close_note_modal(page)
+    card = _safe_query(page, selectors.note_card(note_id))
+    if card is None:
+        return False
+    target = _safe_query(card, selectors.DOM["note_card_cover"]) or card
+    pacing.click(page, target)
+    for _ in range(3):
+        human_pause(1.2)
+        if note_id in (getattr(page, "url", "") or ""):
+            return True
+    log_store.write_log("warning", "xhs", "点了列表里的卡片没打开笔记，退回直接跳网址")
+    return False
+
+
 def open_detail(
     page: Any, note_id: str, xsec_token: str, xsec_source: str = "pc_feed"
 ) -> tuple[parse.Note, parse.CommentPage]:
-    page.goto(selectors.detail_url(note_id, xsec_token, xsec_source), wait_until=GOTO_WAIT_UNTIL, timeout=GOTO_TIMEOUT_MS)
+    """真人节奏（9/26）：列表页上有这张卡片就点进去，没有才直接跳网址
+    （相当于从链接打开）；读完 state 再按正文长短停一会儿、翻几张图。"""
+    if not _open_card(page, note_id):
+        page.goto(selectors.detail_url(note_id, xsec_token, xsec_source), wait_until=GOTO_WAIT_UNTIL, timeout=GOTO_TIMEOUT_MS)
     entry = None
     for _ in range(3):
         human_pause(1.6)
@@ -406,6 +504,7 @@ def open_detail(
         raise XhsError("这条笔记打不开，可能被删除或者需要登录")
     note = parse.parse_note_from_detail(entry)
     page_data = parse.parse_comments_from_detail(entry)
+    pacing.linger_on_note(page, note)
     return note, page_data
 
 
@@ -427,6 +526,17 @@ def _ensure_on_note(page: Any, current_note: dict[str, Any]) -> None:
     open_detail(page, note_id, xsec_token, xsec_source)
 
 
+def _hover_scroller(page: Any) -> None:
+    """鼠标要在 `.note-scroller` 上滚轮才滚得动评论区。能量到位置就慢慢
+    移过去，量不到（假 page）退回 `page.hover`。"""
+    scroller = _safe_query(page, selectors.DOM["note_scroller"])
+    if scroller is not None and pacing.measure(scroller) is not None:
+        pacing.hover(page, scroller)
+        return
+    with contextlib.suppress(Exception):
+        page.hover(selectors.DOM["note_scroller"])
+
+
 def load_comments(page: Any, note_id: str, want: int) -> parse.CommentPage:
     """滚 `.note-scroller` 补评论，直到条数够 `want` 或 `hasMore` 为假，
     最多 `COMMENTS_SCROLL_MAX_ROUNDS` 轮（S3.1 审查意见 1.1）。调用方已经
@@ -438,10 +548,9 @@ def load_comments(page: Any, note_id: str, want: int) -> parse.CommentPage:
     for _ in range(COMMENTS_SCROLL_MAX_ROUNDS):
         if len(page_data.comments) >= want or not page_data.has_more:
             break
-        with contextlib.suppress(Exception):
-            page.hover(selectors.DOM["note_scroller"])
-        page.mouse.wheel(0, COMMENTS_SCROLL_DY)
-        human_pause(1.8)
+        _hover_scroller(page)
+        pacing.scroll(page, COMMENTS_SCROLL_DY * random.uniform(0.6, 1.0))
+        human_pause(2.4)
         _check_risk(page)
         entry = read_state(page, selectors.note_detail_path(note_id)) or {}
         page_data = parse.parse_comments_from_detail(entry)
@@ -467,8 +576,8 @@ def expand_comment(page: Any, note_id: str, index: int) -> parse.Comment:
     element = elements[index - 1] if elements and 0 < index <= len(elements) else None
     if element is None:
         raise XhsError(f"没有第 {index} 条评论")
-    with contextlib.suppress(Exception):
-        element.scroll_into_view_if_needed()
+    _hover_scroller(page)
+    pacing.bring_into_view(page, element)
 
     entry = read_state(page, selectors.note_detail_path(note_id))
     target = _comment_entry_at(entry, index)
@@ -482,8 +591,8 @@ def expand_comment(page: Any, note_id: str, index: int) -> parse.Comment:
         if show_more is None:
             break
         with contextlib.suppress(Exception):
-            show_more.click()
-        human_pause(1.5)
+            pacing.click(page, show_more)
+        human_pause(2.0)
         _check_risk(page)
         entry = read_state(page, selectors.note_detail_path(note_id))
         target = _comment_entry_at(entry, index)

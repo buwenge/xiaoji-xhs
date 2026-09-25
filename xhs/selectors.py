@@ -112,6 +112,15 @@ DOM = {
     "note_scroller": ".note-scroller",
     # S3.1 审查意见 1.1：`browser.expand_comment` 点这个按钮展开楼中楼。
     "comment_reply_show_more": ".reply-container .show-more",
+    # 9/26 真人节奏：从搜索框打字搜、从列表点卡片进笔记、关弹层再点下一
+    # 张。`search_input`/卡片的 `data-note-id`/`a.cover` 9/26 匿名实测核对
+    # 过（原来记的 `.search-layout .search-input` 已经对不上）；弹层与关闭
+    # 按钮匿名点不开卡片，登录态下待核对，找不到时 browser.py 退回
+    # Esc 键/直接跳网址。
+    "search_input": "#search-input",
+    "note_card_cover": "a.cover",
+    "note_modal": ".note-detail-mask",
+    "note_close": ".close-circle",
     # ↓ 同一次 DOM 普查记下来但本阶段代码没接线（S4 实时观看会用到；
     # 改版时这些一起核对，不要漏掉——2026-09-22 code-review 指出：不标
     # 出来的话，下一个人分不清哪些是"现在真依赖的"、哪些只是记录）。
@@ -122,8 +131,12 @@ DOM = {
     "comments_total": ".comments-el .total",
     "feeds_container": ".feeds-page .feeds-container",
     "note_item": "section.note-item",
-    "search_input": ".search-layout .search-input",
 }
+
+
+def note_card(note_id: str) -> str:
+    """列表页（首页/搜索结果）里某条笔记的卡片。"""
+    return f"section.note-item[data-note-id='{note_id}']"
 
 # 验证码/风控页：匿名实测未撞到，无真实选择器，先放一个候选列表；
 # `browser.py` 撞到其中任意一个就当"需要人来处理"，立刻停并截图，不硬闯

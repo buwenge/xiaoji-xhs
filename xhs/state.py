@@ -8,14 +8,12 @@
 
 from __future__ import annotations
 
-import contextlib
 import json
-import os
-import tempfile
 from pathlib import Path
 from typing import Any
 
 from xhs import paths
+from file_io import write_json_atomic
 
 DEFAULT_STATE: dict[str, Any] = {
     "day": None,
@@ -48,13 +46,4 @@ def load(path: Path | None = None) -> dict[str, Any]:
 
 def save(state: dict[str, Any], path: Path | None = None) -> None:
     target = path or paths.state_file()
-    target.parent.mkdir(parents=True, exist_ok=True)
-    fd, tmp_name = tempfile.mkstemp(dir=str(target.parent), prefix=".state-", suffix=".tmp")
-    try:
-        with os.fdopen(fd, "w", encoding="utf-8") as handle:
-            json.dump(state, handle, ensure_ascii=False, indent=2)
-        os.replace(tmp_name, target)
-    except BaseException:
-        with contextlib.suppress(OSError):
-            os.unlink(tmp_name)
-        raise
+    write_json_atomic(target, state)

@@ -30,6 +30,7 @@ KEEPER_JSON_FILENAME = "keeper.json"
 KEEPER_TOUCH_FILENAME = "keeper.touch"
 KEEPER_LOG_FILENAME = "keeper.log"
 KEEPER_LOCK_FILENAME = "keeper.lock"
+BROWSER_USAGE_FILENAME = "browser_usage.json"
 
 IMAGES_TTL_SECONDS = 24 * 3600
 DESCRIPTIONS_TTL_SECONDS = 7 * 24 * 3600
@@ -88,6 +89,11 @@ def keeper_lock_path() -> Path:
     """看守进程单例锁（`flock`），防止两个 CLI 进程同时
     各起一个看守进程。"""
     return XHS_DIR / KEEPER_LOCK_FILENAME
+
+
+def browser_usage_path() -> Path:
+    """每天开浏览器的次数 `{day, count}`，`xhs.pacing.admit()` 读写。"""
+    return XHS_DIR / BROWSER_USAGE_FILENAME
 
 
 def touch_keeper() -> None:

@@ -17,7 +17,29 @@ from unittest.mock import patch
 
 from PIL import Image
 
-from xhs import XhsError, browser, paths, selectors
+from xhs import XhsError, browser, pacing, paths, selectors
+
+
+def setUpModule():
+    # 真人节奏（9/26）的停顿全经 `pacing._sleep`，测试一律不真睡。
+    global _PACING_SLEEP_PATCHER
+    _PACING_SLEEP_PATCHER = patch.object(pacing, "_sleep", lambda *a, **k: None)
+    _PACING_SLEEP_PATCHER.start()
+
+
+def tearDownModule():
+    _PACING_SLEEP_PATCHER.stop()
+
+
+class ScrollRecorder:
+    """把 `pacing.scroll` 换成只记账：一次调用 = 一"轮"滚动（真实实现会拆成
+    好几下 `mouse.wheel`，按 wheel 次数数轮数就不对了）。"""
+
+    def __init__(self):
+        self.calls: list[float] = []
+
+    def __call__(self, page, dy):
+        self.calls.append(dy)
 
 
 class FakeElement:
@@ -51,6 +73,9 @@ class FakeElement:
 
     def click(self):
         self.click_calls += 1
+        hook = getattr(self, "on_click", None)
+        if hook is not None:
+            hook()
 
     def scroll_into_view_if_needed(self):
         self.scroll_into_view_calls += 1
@@ -67,6 +92,18 @@ class FakeMouse:
         self.wheel_calls.append((dx, dy))
 
 
+class FakeKeyboard:
+    def __init__(self):
+        self.typed: list[str] = []
+        self.presses: list[str] = []
+
+    def type(self, text):
+        self.typed.append(text)
+
+    def press(self, key):
+        self.presses.append(key)
+
+
 class FakePage:
     def __init__(self):
         self.goto_calls: list[str] = []
@@ -76,6 +113,8 @@ class FakePage:
         self.query_selector_all_calls: list[str] = []
         self.hover_calls: list[str] = []
         self.mouse = FakeMouse()
+        self.keyboard = FakeKeyboard()
+        self.focused_id = None  # `document.activeElement.id`
         self.state_responses: dict[str, object] = {}
         self._state_call_counts: dict[str, int] = {}
         self.dom_elements: dict[str, object] = {}
@@ -99,6 +138,8 @@ class FakePage:
 
     def evaluate(self, script, arg=None):
         self.evaluate_calls.append((script, arg))
+        if "activeElement" in script:
+            return self.focused_id
         if script != selectors.READ_STATE_JS:
             return None
         resp = self.state_responses.get(arg)
@@ -423,12 +464,44 @@ class ListActionTests(unittest.TestCase):
         first_query = next(i for i, c in enumerate(page.call_log) if c[0] == "query_selector")
         self.assertLess(first_goto, first_query)
 
-    def test_search_goes_to_search_url_with_keyword(self):
+    def test_search_without_search_box_arrives_home_then_falls_back_to_url(self):
+        # 真人节奏（9/26）：浏览器还停在空白页时先进首页；页面上找不到搜索
+        # 框才退回直接跳搜索网址。
         page = FakePage()
         page.state_responses["search.feeds"] = FEED_ITEMS_RAW
         items = browser.search(page, "猫咪零食")
-        self.assertEqual(page.goto_calls, [selectors.search_url("猫咪零食")])
+        self.assertEqual(page.goto_calls, [selectors.EXPLORE_URL, selectors.search_url("猫咪零食")])
         self.assertEqual(len(items), 2)
+
+    def test_search_types_into_search_box_instead_of_jumping(self):
+        page = FakePage()
+        page.url = selectors.EXPLORE_URL
+        box = FakeElement()
+        page.dom_elements[selectors.DOM["search_input"]] = box
+
+        def press(key):
+            page.keyboard.presses.append(key)
+            if key == "Enter":
+                page.url = selectors.search_url("猫咪")
+        page.keyboard.press = press
+        page.focused_id = "search-input"
+        page.state_responses["search.feeds"] = FEED_ITEMS_RAW
+        items = browser.search(page, "猫咪")
+        self.assertEqual(page.goto_calls, [])
+        self.assertEqual(box.click_calls, 1)
+        self.assertEqual(page.keyboard.typed, ["猫", "咪"])
+        self.assertEqual(page.keyboard.presses, ["Control+A", "Backspace", "Enter"])
+        self.assertEqual(len(items), 2)
+
+    def test_search_box_not_focused_falls_back_without_select_all(self):
+        # 9/26 匿名实测：有遮罩时点不进搜索框，再按 Ctrl+A 会选中整页。
+        page = FakePage()
+        page.url = selectors.EXPLORE_URL
+        page.dom_elements[selectors.DOM["search_input"]] = FakeElement()
+        page.state_responses["search.feeds"] = FEED_ITEMS_RAW
+        browser.search(page, "猫咪")
+        self.assertEqual(page.keyboard.presses, [])
+        self.assertEqual(page.goto_calls, [selectors.search_url("猫咪")])
 
     def test_search_checks_risk_after_navigating_not_before(self):
         page = FakePage()
@@ -476,18 +549,21 @@ class ListActionTests(unittest.TestCase):
         page = FakePage()
         hint = selectors.RISK_PAGE_HINTS[0]
         page.dom_elements[hint] = FakeElement()
-        with self.assertRaises(XhsError):
+        recorder = ScrollRecorder()
+        with patch.object(pacing, "scroll", recorder), self.assertRaises(XhsError):
             browser.load_more(page, "feed", current_count=0)
         self.assertIn(hint, page.query_selector_calls)
         # 撞到风控就该立刻停，不该还是滚了 3 次才发现。
-        self.assertLessEqual(len(page.mouse.wheel_calls), 1)
+        self.assertLessEqual(len(recorder.calls), 1)
 
     def test_load_more_gives_up_after_three_scrolls_with_no_growth(self):
         page = FakePage()
         page.url = selectors.EXPLORE_URL
         page.state_responses["feed.feeds"] = FEED_ITEMS_RAW  # 长度一直不变
-        self.assertEqual(browser.load_more(page, "feed", current_count=2), [])
-        self.assertEqual(len(page.mouse.wheel_calls), 3)
+        recorder = ScrollRecorder()
+        with patch.object(pacing, "scroll", recorder):
+            self.assertEqual(browser.load_more(page, "feed", current_count=2), [])
+        self.assertEqual(len(recorder.calls), 3)
 
     def test_load_more_unknown_kind_raises(self):
         page = FakePage()
@@ -554,12 +630,55 @@ class DetailActionTests(unittest.TestCase):
         self.assertEqual(page_data.comments, [])
 
     def test_open_detail_checks_risk_after_navigating_not_before(self):
+        # 9/26 起 goto 之前会先查"有没有弹层/列表上有没有这张卡片"，所以
+        # 这里只看风控检查那几个选择器是不是都排在 goto 之后。
         page = FakePage()
         page.state_responses["note.noteDetailMap.n1"] = DETAIL_ENTRY
         browser.open_detail(page, "n1", "TOKEN")
         first_goto = next(i for i, c in enumerate(page.call_log) if c[0] == "goto")
-        first_query = next(i for i, c in enumerate(page.call_log) if c[0] == "query_selector")
-        self.assertLess(first_goto, first_query)
+        first_risk = next(
+            i for i, c in enumerate(page.call_log)
+            if c[0] == "query_selector" and c[1] in selectors.RISK_PAGE_HINTS
+        )
+        self.assertLess(first_goto, first_risk)
+
+    def test_open_detail_clicks_card_on_list_page_instead_of_jumping(self):
+        page = FakePage()
+        page.url = selectors.EXPLORE_URL
+        cover = FakeElement()
+        cover.on_click = lambda: setattr(page, "url", selectors.detail_url("n1", "TOKEN"))
+        page.dom_elements[selectors.note_card("n1")] = FakeElement(children={selectors.DOM["note_card_cover"]: cover})
+        page.state_responses["note.noteDetailMap.n1"] = DETAIL_ENTRY
+        note, _ = browser.open_detail(page, "n1", "TOKEN")
+        self.assertEqual(page.goto_calls, [])
+        self.assertEqual(cover.click_calls, 1)
+        self.assertEqual(note.note_id, "n1")
+
+    def test_open_detail_closes_open_modal_before_clicking_next_card(self):
+        page = FakePage()
+        page.url = selectors.detail_url("n0", "T0")
+        close_btn = FakeElement()
+        close_btn.on_click = lambda: page.dom_elements.pop(selectors.DOM["note_modal"], None)
+        page.dom_elements[selectors.DOM["note_modal"]] = FakeElement()
+        page.dom_elements[selectors.DOM["note_close"]] = close_btn
+        cover = FakeElement()
+        cover.on_click = lambda: setattr(page, "url", selectors.detail_url("n1", "TOKEN"))
+        page.dom_elements[selectors.note_card("n1")] = FakeElement(children={selectors.DOM["note_card_cover"]: cover})
+        page.state_responses["note.noteDetailMap.n1"] = DETAIL_ENTRY
+        browser.open_detail(page, "n1", "TOKEN")
+        self.assertEqual(close_btn.click_calls, 1)
+        self.assertEqual(cover.click_calls, 1)
+        self.assertEqual(page.goto_calls, [])
+
+    def test_open_detail_falls_back_to_url_when_card_click_does_not_open(self):
+        page = FakePage()
+        page.url = selectors.EXPLORE_URL
+        cover = FakeElement()  # 点了网址不变
+        page.dom_elements[selectors.note_card("n1")] = FakeElement(children={selectors.DOM["note_card_cover"]: cover})
+        page.state_responses["note.noteDetailMap.n1"] = DETAIL_ENTRY
+        browser.open_detail(page, "n1", "TOKEN")
+        self.assertEqual(cover.click_calls, 1)
+        self.assertEqual(page.goto_calls, [selectors.detail_url("n1", "TOKEN")])
 
     def test_open_detail_retries_until_state_populated(self):
         page = FakePage()
@@ -651,10 +770,12 @@ class LoadCommentsTests(unittest.TestCase):
         page.state_responses["note.noteDetailMap.n1"] = lambda i: (
             DETAIL_ENTRY_WITH_COMMENTS if i == 0 else more_entry
         )
-        page_data = browser.load_comments(page, "n1", want=2)
+        recorder = ScrollRecorder()
+        with patch.object(pacing, "scroll", recorder):
+            page_data = browser.load_comments(page, "n1", want=2)
         self.assertEqual(len(page_data.comments), 2)
         self.assertFalse(page_data.has_more)
-        self.assertEqual(len(page.mouse.wheel_calls), 1)
+        self.assertEqual(len(recorder.calls), 1)
         self.assertIn(selectors.DOM["note_scroller"], page.hover_calls)
 
     def test_stops_when_has_more_false_even_if_want_not_reached(self):
@@ -670,18 +791,21 @@ class LoadCommentsTests(unittest.TestCase):
     def test_gives_up_after_max_rounds(self):
         page = FakePage()
         page.state_responses["note.noteDetailMap.n1"] = DETAIL_ENTRY_WITH_COMMENTS  # 一直不变
-        page_data = browser.load_comments(page, "n1", want=99)
+        recorder = ScrollRecorder()
+        with patch.object(pacing, "scroll", recorder):
+            page_data = browser.load_comments(page, "n1", want=99)
         self.assertEqual(len(page_data.comments), 1)
-        self.assertEqual(len(page.mouse.wheel_calls), browser.COMMENTS_SCROLL_MAX_ROUNDS)
+        self.assertEqual(len(recorder.calls), browser.COMMENTS_SCROLL_MAX_ROUNDS)
 
     def test_checks_risk_while_scrolling(self):
         page = FakePage()
         page.state_responses["note.noteDetailMap.n1"] = DETAIL_ENTRY_WITH_COMMENTS
         hint = selectors.RISK_PAGE_HINTS[0]
         page.dom_elements[hint] = FakeElement()
-        with self.assertRaises(XhsError):
+        recorder = ScrollRecorder()
+        with patch.object(pacing, "scroll", recorder), self.assertRaises(XhsError):
             browser.load_comments(page, "n1", want=99)
-        self.assertLessEqual(len(page.mouse.wheel_calls), 1)
+        self.assertLessEqual(len(recorder.calls), 1)
 
 
 class ExpandCommentTests(unittest.TestCase):
